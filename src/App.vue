@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <form @submit="submitFunction">
     <label for="usename">Pseudo</label>
     <input type="text" id="username" v-model="usernameValue" />
     <p v-if="usernameError">{{ usernameError }}</p>
@@ -11,11 +11,13 @@
     <label for="confirmPassword">Confirmation du mot de passe</label>
     <input type="password" id="confirmPassword" v-model="verifyPasswordValue" />
     <p v-if="validatePasswordError">{{ validatePasswordError }}</p>
-  </div>
+    <button :disabled="isSubmitting">Submit</button>
+  </form>
 </template>
 
 <script setup>
 import { toTypedSchema } from "@vee-validate/zod";
+import { jwtDecode } from "jwt-decode";
 import { useField, useForm } from "vee-validate";
 import { z } from "zod";
 
@@ -33,12 +35,33 @@ const schema = z
     path: ["verifyPassword"],
   });
 
-useForm({
+const { handleSubmit, isSubmitting, resetForm } = useForm({
   validationSchema: toTypedSchema(schema),
   initialValues: {
     username: "",
     email: "",
   },
+});
+
+const submitFunction = handleSubmit(async (values) => {
+  // console.log(values);
+  try {
+    const response = await fetch("http://localhost:5000/api/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(values),
+    });
+    const data = await response.json();
+    if (response.ok) {
+      const decodedToken = jwtDecode(data);
+      console.log({ decodedToken });
+      resetForm();
+    }
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 const { value: usernameValue, errorMessage: usernameError } =
@@ -52,7 +75,7 @@ const { value: verifyPasswordValue, errorMessage: validatePasswordError } =
 </script>
 
 <style scoped>
-div {
+form {
   margin: 20px;
   display: flex;
   flex-direction: column;
@@ -63,5 +86,10 @@ input {
 }
 p {
   color: red;
+}
+
+button {
+  width: 300px;
+  padding: 6px 12px;
 }
 </style>
